@@ -6,6 +6,8 @@ FROM gradle:7.2 as builder
 COPY build.gradle.kts .
 COPY src ./src
 
+
+
 # Build a release artifact.
 RUN gradle build -x test --no-daemon --stacktrace
 
@@ -20,4 +22,4 @@ FROM adoptopenjdk/openjdk11:ubi
 COPY --from=builder /home/gradle/build/libs/gradle-0.0.1-SNAPSHOT.jar /kitchen.jar
 
 # Run the web service on container startup.
-CMD [ "java", "-jar", "-Djava.security.egd=file:/dev/./urandom", "/kitchen.jar" ]
+CMD [ "java", "-jar", "-Djava.security.egd=file:/dev/./urandom", "-Dspring.profiles.active=docker", "/kitchen.jar" ]
