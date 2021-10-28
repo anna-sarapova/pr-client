@@ -1,36 +1,43 @@
 package com.server.kitchen
 
-import com.server.kitchen.models.Order
 import com.server.kitchen.services.Kitchen
+import com.server.kitchen.models.Distribution
+import com.server.kitchen.models.FoodItem
 import org.slf4j.LoggerFactory
 import java.lang.Exception
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
-class Cook(val rank: Int, val proficiency: Int, val cook_name: String, val catch_phrase: String, private val kitchen: Kitchen): Thread() {
+class Cook(private val cookId: Int, private val rank: Int, private val proficiency: Int, private val cook_name: String,
+           private val catch_phrase: String, private val kitchen: Kitchen, private val url: String?,
+           private val menu: List<FoodItem>): Thread() {
 
     private val logger = LoggerFactory.getLogger(Cook::class.java)
-    private val cookId: Int = 0
     private val lazyFactor: Int = 2
 
     override fun run() {
-        logger.info("${currentThread()} has run. Cook $cookId is starting his work!")
+        logger.info("${currentThread()} has run. Cook $cookId is starting his work!\tproficiency: ${proficiency}\trank: ${rank}")
         while (true){
             try {
-                var waitingOrder: MutableList<Order> = kitchen.getWaitingOrderList()
+                val order = kitchen.getOrderFromBoardOrderList(rank)
+                if(order != null) {
 
-                for(item in waitingOrder) {
-                    if (waitingOrder == null) {
-                        Thread.sleep(((0..lazyFactor).random() * 1000).toLong())
-                    } else {
-                        kitchen.removeWaitingOrderList(item.order_id)
-                        logger.info("The Cook is cooking, wait a bit..")
-                        kitchen.addDoneOrderList(item.order_id)
-                    }
-                    println(kitchen.getWaitingOrderList())
-                    println(kitchen.getDoneOrderList())
                 }
             } catch (e: Exception) {
-                logger.info("Ups, something went wrong, I don't know what")
+                logger.info("Ups, something went wrong, I don't know what: " + e.message)
             }
         }
+    }
+
+    private fun distributeOrders(client: HttpClient, distribution: Distribution) {
+        val request = HttpRequest.newBuilder()
+                .uri(URI.create("http://${url}:8080/distribution"))
+                .POST(HttpRequest.BodyPublishers.ofString(distribution.toJSON()))
+                .header("Content-Type", "application/json")
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 }

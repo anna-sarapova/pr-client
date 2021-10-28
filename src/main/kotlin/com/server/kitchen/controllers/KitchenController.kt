@@ -1,5 +1,6 @@
 package com.server.kitchen.controllers
 
+import com.server.kitchen.models.Distribution
 import com.server.kitchen.models.Order
 import com.server.kitchen.services.Kitchen
 import org.slf4j.LoggerFactory
@@ -25,4 +26,11 @@ class KitchenController(val kitchen: Kitchen) {
         kitchen.addWaitingOrderList(order)
         return "Order with id: " + order.order_id + " has been received. To be processed..."
     }
+
+    @PostMapping("/distribution")
+    fun distribution(@RequestBody distribution: Distribution) : String {
+        logger.info("Order has been done")
+        return "Order with id: " + distribution.order_id + " it's ready to be eaten"
+    }
+
 }
