@@ -1,10 +1,9 @@
 package com.server.kitchen
 
-import com.server.kitchen.services.Kitchen
 import com.server.kitchen.models.Distribution
 import com.server.kitchen.models.FoodItem
+import com.server.kitchen.services.Kitchen
 import org.slf4j.LoggerFactory
-import java.lang.Exception
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -20,8 +19,9 @@ class Cook(private val cookId: Int, private val rank: Int, private val proficien
     override fun run() {
         logger.info("${currentThread()} has run. Cook $cookId is starting his work!\tproficiency: ${proficiency}\trank: ${rank}")
         while (true){
+            sleep(20000)
             try {
-                val order = kitchen.getOrderFromBoardOrderList(rank)
+                val order = kitchen.getOrderFromBoardOrderList(rank, proficiency, cookId)
                 if(order != null) {
 
                 }
