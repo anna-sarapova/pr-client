@@ -1,15 +1,17 @@
 package com.server.kitchen.services
 
 import com.server.kitchen.Cook
-import com.server.kitchen.models.BoardItem
-import com.server.kitchen.models.FoodItem
-import com.server.kitchen.models.Order
+import com.server.kitchen.CookingApparatus
+import com.server.kitchen.models.*
 import com.server.kitchen.utils.Utils
-import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.util.function.Predicate
 
 @Service
 class Kitchen {
@@ -18,24 +20,32 @@ class Kitchen {
 
     private val url: String = "localhost"
 
-    private var cooks: MutableList<Cook> = arrayListOf()
     private var cookSize: Int = 2
+    private var stoveSize: Int = 0
+    private var ovenSize: Int = 0
+
+    private var cooks: MutableList<Cook> = arrayListOf()
     private var orderList: MutableList<Order> = arrayListOf()
-    private var doneOrderList: MutableList<Int> = arrayListOf()
+    private var progressDistributionList: MutableList<Distribution> = arrayListOf()
     private var orderItemBoard = HashMap<Int, MutableList<BoardItem>>()
-    private val lazyFactor: Int = 4
+    private var ovenList: MutableList<CookingApparatus> = arrayListOf()
+    private var stoveList: MutableList<CookingApparatus> = arrayListOf()
+
     private var menu: List<FoodItem> = Utils.getMeThatMenu()
-//    private val mutex = ReentrantLock()
-    private val mutex = Mutex()
-
-
 
     init {
         for(i in 0..cookSize) {
             cooks.add(Cook(i, (i % 3) + 1, (i % 3) + 1, "Cook${i}", "Let this food be prepared!", this, url, menu))
 //            cooks.add(Cook(i, 3, 3, "Cook${i}", "Let this food be prepared!", this, url, menu))
-
             cooks[i].start()
+        }
+        for(i in 0..ovenSize) {
+            ovenList.add(CookingApparatus("Oven"))
+            ovenList[i].start()
+        }
+        for(i in 0..stoveSize) {
+            stoveList.add(CookingApparatus("Stove"))
+            stoveList[i].start()
         }
         for(i in 1..3) {
             orderItemBoard[i] = arrayListOf()
@@ -48,6 +58,10 @@ class Kitchen {
         printList(orderItemBoard[2])
         printList(orderItemBoard[3])
         orderList.add(order)
+
+        progressDistributionList.add(Distribution(order.order_id, order.table_id,
+                order.waiter_id, order.items, order.priority,
+                order.max_wait, System.currentTimeMillis()))
     }
 
     private fun distributeOrderBoard(items: MutableList<Int>, orderId: Int) {
@@ -78,33 +92,38 @@ class Kitchen {
                 key++
             }
         }
-
-
         print(" ATTENTION MY (${cookId}) ITEM LIST: ")
         printList(cookPreparationList)
         print("\n")
         return cookPreparationList
     }
 
-    fun removeEntries(id: Int?,complexityKey: Int){
-//        val entrySet = HashMap<String, String>()
-        orderItemBoard[complexityKey]?.removeIf() {
-            it.foodItemId == id
+    @Synchronized
+    fun addOrderToProcessedOrdersWhichAreDoneFoodConvertedToDistributedType(boardItem: BoardItem, cookId: Int) {
+        val distribution: Distribution? = progressDistributionList.find { it.order_id == boardItem.orderId }
+        distribution?.cooking_details?.add(CookingDetail(boardItem.foodItemId, cookId))
+
+        if (distribution?.items?.size == distribution?.cooking_details?.size) {
+            if (distribution != null) {
+                distribution.cooking_time = System.currentTimeMillis() - distribution.pick_up_time
+                distributeOrders(distribution)
+            }
+            val condition: Predicate<Order> = Predicate<Order> { order -> order.order_id == boardItem.orderId }
+            progressDistributionList.remove(distribution)
+            orderList.removeIf(condition)
         }
     }
 
-//    fun removeBoardOrder(id: Int?, complexityKey: Int) {
-//        var filteredMap = orderItemBoard[complexityKey]?.filter {
-//            (it.foodItemId == id)
-//        }
-//    }
 
-    fun getWaitingOrderList(): MutableList<Order> {
-        return orderList
-    }
+    private fun distributeOrders(distribution: Distribution) {
+        val client = HttpClient.newBuilder().build();
+        val request = HttpRequest.newBuilder()
+                .uri(URI.create("http://${url}:8080/distribution"))
+                .POST(HttpRequest.BodyPublishers.ofString(distribution.toJSON()))
+                .header("Content-Type", "application/json")
+                .build()
 
-    fun addDoneOrderList(id: Int) {
-        doneOrderList.add(id)
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     // DEBUG HELPERS
@@ -115,6 +134,14 @@ class Kitchen {
             }
         }
         print("\n")
+    }
+
+    fun useApparatus(time: Long, apparatus: String?) {
+        if (apparatus == "oven") {
+            stoveList[(0..stoveSize).random()].useApparatus(time)
+        } else if (apparatus == "stove") {
+            stoveList[(0..stoveSize).random()].useApparatus(time)
+        }
     }
 
     @Scheduled(fixedDelay = 5000)

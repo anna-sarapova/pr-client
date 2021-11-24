@@ -1,13 +1,9 @@
 package com.server.kitchen
 
-import com.server.kitchen.models.Distribution
+import com.server.kitchen.models.BoardItem
 import com.server.kitchen.models.FoodItem
 import com.server.kitchen.services.Kitchen
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 class Cook(private val cookId: Int, private val rank: Int, private val proficiency: Int, private val cook_name: String,
            private val catch_phrase: String, private val kitchen: Kitchen, private val url: String?,
@@ -19,11 +15,10 @@ class Cook(private val cookId: Int, private val rank: Int, private val proficien
     override fun run() {
         logger.info("${currentThread()} has run. Cook $cookId is starting his work!\tproficiency: ${proficiency}\trank: ${rank}")
         while (true){
-            sleep(20000)
             try {
-                val order = kitchen.getOrderFromBoardOrderList(rank, proficiency, cookId)
-                if(order != null) {
-
+                val boardItems = kitchen.getOrderFromBoardOrderList(rank, proficiency, cookId)
+                if(boardItems != null) {
+                    prepareOrders(boardItems)
                 }
             } catch (e: Exception) {
                 logger.info("Ups, something went wrong, I don't know what: " + e.message)
@@ -31,13 +26,20 @@ class Cook(private val cookId: Int, private val rank: Int, private val proficien
         }
     }
 
-    private fun distributeOrders(client: HttpClient, distribution: Distribution) {
-        val request = HttpRequest.newBuilder()
-                .uri(URI.create("http://${url}:8080/distribution"))
-                .POST(HttpRequest.BodyPublishers.ofString(distribution.toJSON()))
-                .header("Content-Type", "application/json")
-                .build()
+    private fun prepareOrders(boardItems: MutableList<BoardItem> ) {
+        for (boardItem in boardItems) {
+            if(menu[boardItem.foodItemId - 1].`cooking-apparatus` != null) {
+                kitchen.useApparatus(menu[boardItem.foodItemId - 1].`preparation-time`.toLong(), menu[boardItem.foodItemId - 1].`cooking-apparatus`)
+            } else {
+                sleep(menu[boardItem.foodItemId - 1].`preparation-time`.toLong())
+            }
 
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            kitchen.addOrderToProcessedOrdersWhichAreDoneFoodConvertedToDistributedType(boardItem, cookId)
+            // @Synchronized - should be.
+            // find order from orderList by boardItem's orderId
+            // add to the Distribution.cooking_details the item that was just done
+            // after add check if Distribution.items.size() == Distribution.cooking_details.size()
+            // if equal construct the distribution distributeOrders(orderId, System.currentMillis() - timestampHandlers[get the index of current orderId].receivedTime)
+        }
     }
 }
