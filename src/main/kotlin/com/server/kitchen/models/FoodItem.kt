@@ -5,5 +5,5 @@ data class FoodItem(
         val name: String,
         val `preparation-time`: Int,
         val complexity: Int,
-        val `cooking-apparatus`: String) {
+        val `cooking-apparatus`: String?) {
 }
