@@ -35,11 +35,6 @@ class Cook(private val cookId: Int, private val rank: Int, private val proficien
             }
             logger.info("Prepared ${boardItem.foodItemId} item for order ${boardItem.orderId}")
             kitchen.addOrderToProcessedOrdersWhichAreDoneFoodConvertedToDistributedType(boardItem, cookId)
-            // @Synchronized - should be.
-            // find order from orderList by boardItem's orderId
-            // add to the Distribution.cooking_details the item that was just done
-            // after add check if Distribution.items.size() == Distribution.cooking_details.size()
-            // if equal construct the distribution distributeOrders(orderId, System.currentMillis() - timestampHandlers[get the index of current orderId].receivedTime)
         }
     }
 }
