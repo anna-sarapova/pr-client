@@ -54,9 +54,9 @@ class Kitchen {
 
     fun addWaitingOrderList(order: Order) {
         distributeOrderBoard(order.items, order.order_id)
-        printList(orderItemBoard[1])
-        printList(orderItemBoard[2])
-        printList(orderItemBoard[3])
+//        printList(orderItemBoard[1])
+//        printList(orderItemBoard[2])
+//        printList(orderItemBoard[3])
         orderList.add(order)
 
         progressDistributionList.add(Distribution(order.order_id, order.table_id,
@@ -92,9 +92,9 @@ class Kitchen {
                 key++
             }
         }
-        print(" ATTENTION MY (${cookId}) ITEM LIST: ")
-        printList(cookPreparationList)
-        print("\n")
+//        print(" ATTENTION MY (${cookId}) ITEM LIST: ")
+//        printList(cookPreparationList)
+//        print("\n")
         return cookPreparationList
     }
 
@@ -105,6 +105,7 @@ class Kitchen {
 
         if (distribution?.items?.size == distribution?.cooking_details?.size) {
             if (distribution != null) {
+                logger.info("!!!!!!!  Order with id ${distribution.order_id} is done, sending to dinninghall")
                 distribution.cooking_time = System.currentTimeMillis() - distribution.pick_up_time
                 distributeOrders(distribution)
             }
@@ -118,12 +119,13 @@ class Kitchen {
     private fun distributeOrders(distribution: Distribution) {
         val client = HttpClient.newBuilder().build();
         val request = HttpRequest.newBuilder()
-                .uri(URI.create("http://${url}:8080/distribution"))
+                .uri(URI.create("http://${url}:8081/distribution"))
                 .POST(HttpRequest.BodyPublishers.ofString(distribution.toJSON()))
                 .header("Content-Type", "application/json")
                 .build()
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        logger.info(response.body())
     }
 
     // DEBUG HELPERS
@@ -138,7 +140,7 @@ class Kitchen {
 
     fun useApparatus(time: Long, apparatus: String?) {
         if (apparatus == "oven") {
-            stoveList[(0..stoveSize).random()].useApparatus(time)
+            ovenList[(0..ovenSize).random()].useApparatus(time)
         } else if (apparatus == "stove") {
             stoveList[(0..stoveSize).random()].useApparatus(time)
         }
