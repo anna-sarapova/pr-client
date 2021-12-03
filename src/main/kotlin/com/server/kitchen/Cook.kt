@@ -33,7 +33,7 @@ class Cook(private val cookId: Int, private val rank: Int, private val proficien
             } else {
                 sleep(menu[boardItem.foodItemId - 1].`preparation-time`.toLong())
             }
-
+            logger.info("Prepared ${boardItem.foodItemId} item for order ${boardItem.orderId}")
             kitchen.addOrderToProcessedOrdersWhichAreDoneFoodConvertedToDistributedType(boardItem, cookId)
             // @Synchronized - should be.
             // find order from orderList by boardItem's orderId

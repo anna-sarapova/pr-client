@@ -21,11 +21,22 @@ data class Distribution (
                 "items" : $items,
                 "priority" : $priority,
                 "max_wait" : $max_wait,
-                "pick_up_time" : ${System.currentTimeMillis()}
+                "pick_up_time" : ${System.currentTimeMillis()},
                 "cooking_time": ${System.currentTimeMillis()},
-                "cooking_details": $cooking_details
-
+                "cooking_details": [${cookingDetailsToJSON()}]
             }
         """.trimIndent()
+    }
+
+    fun cookingDetailsToJSON(): String {
+        val jsonList: StringBuilder = java.lang.StringBuilder()
+        for(i in 0 until cooking_details.size) {
+            jsonList.append("{ \"food_id\": ${cooking_details[i].food_id}, \"cook_id\": ${cooking_details[i].cook_id}}")
+            if(i != cooking_details.size - 1) {
+                jsonList.append(",")
+            }
+        }
+
+        return jsonList.toString()
     }
 }
